@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Patient Monitoring Dashboard</title>
+<style>
+:root{--bg:#0b1020;--panel:#151f35;--panel2:#101a2e;--text:#edf3ff;--muted:#a8b8d8;--line:#2a3958;--teal:#71e0c0;--blue:#86b8ff;--amber:#ffd17e;--red:#ff8b99}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 10% 0,#1a2a4a,var(--bg) 50%);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+header{padding:24px clamp(16px,4vw,48px);border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+h1{font-size:clamp(1.45rem,3vw,2rem);margin:0}h2{font-size:1.08rem;margin:0 0 14px}p{margin:4px 0;color:var(--muted)}
+main{max-width:1500px;margin:auto;padding:24px clamp(16px,4vw,48px) 44px}.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px}
+.card{background:linear-gradient(145deg,rgba(25,37,62,.97),rgba(17,26,45,.98));border:1px solid var(--line);border-radius:17px;padding:19px;min-width:0;box-shadow:0 12px 28px #0002}
+.span8{grid-column:span 8}.span4{grid-column:span 4}.span6{grid-column:span 6}.span12{grid-column:span 12}
+.topline{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.pill{border:1px solid var(--line);background:#202d46;color:var(--muted);border-radius:999px;padding:5px 10px;font-size:.8rem;white-space:nowrap}
+.pill.good{background:#153c38;border-color:#286b60;color:var(--teal)}.pill.warn{background:#3b301d;border-color:#806331;color:var(--amber)}.pill.bad{background:#3b202a;border-color:#824151;color:#ffb6c0}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px}.metric{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px}.label{color:var(--muted);font-size:.82rem}.value{font-size:1.32rem;font-weight:750;overflow-wrap:anywhere;margin-top:3px}.unit{font-size:.78rem;font-weight:400;color:var(--muted)}
+.status-main{font-size:1.45rem;font-weight:750;margin:12px 0 4px}.detail{color:var(--muted)}.note{padding:12px 14px;border-radius:12px;background:#192a40;border:1px solid #304868;color:#d5e6ff;margin-bottom:17px}
+.cloud-row{display:flex;align-items:center;gap:12px}.cloud-icon{width:44px;height:44px;display:grid;place-items:center;border-radius:12px;background:#203452;font-size:1.35rem}
+.unavailable{min-height:125px;display:grid;place-content:center;text-align:center;color:var(--muted)}.dash{font-size:1.5rem;letter-spacing:.12em;font-weight:800;color:#e3ebfb}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:200px;overflow:auto;margin:0;color:#cfdbf3;font: .8rem/1.6 ui-monospace,Consolas,monospace}
+.small{font-size:.82rem;color:var(--muted)}footer{text-align:center;color:var(--muted);font-size:.82rem;padding:22px}
+@media(max-width:900px){.span8,.span4,.span6{grid-column:span 12}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Patient Monitoring Dashboard</h1><p>ESP-NOW receiver → USB serial → Flask → dashboard</p></div>
+  <div class="pill" id="serialBadge">Checking receiver…</div>
+</header>
+<main>
+  <div class="note"><strong>Data integrity:</strong> This page reports received sensor data and connection status only. Sensor readings alone cannot confirm that a patient is medically healthy. Firebase status is not reported as synced unless a real cloud write integration has been implemented and verified.</div>
+  <div class="grid">
+    <section class="card span8">
+      <div class="topline"><div><h2>Patient 1 · Live telemetry</h2><p>Latest values parsed from receiver Serial output.</p></div><span id="patientBadge" class="pill">Waiting for data</span></div>
+      <div class="status-main" id="patientStatus">Patient data not collected</div>
+      <p id="patientDetail" class="detail">Waiting for ECG and temperature readings.</p>
+      <div class="metrics" id="metrics" style="margin-top:18px"></div>
+      <p class="small" style="margin-top:14px">Last received update: <span id="lastUpdate">—</span></p>
+    </section>
+    <section class="card span4">
+      <div class="topline"><h2>Cloud data flow</h2><span id="cloudBadge" class="pill warn">Not configured</span></div>
+      <div class="cloud-row"><div class="cloud-icon">☁</div><div><strong>Firebase</strong><p id="cloudStatus">Not configured</p></div></div>
+      <p id="cloudNote" style="margin-top:16px">Telemetry is being read locally by Flask. Firebase upload has not been configured in this starter project.</p>
+      <div style="border-top:1px solid var(--line);margin-top:16px;padding-top:14px"><p class="small">Pipeline</p><div style="margin-top:7px">Receiver <span class="pill" id="rxState">—</span></div><div style="margin-top:8px">Flask API <span class="pill good">Running if page loads</span></div><div style="margin-top:8px">Firebase <span class="pill warn">Pending integration</span></div></div>
+    </section>
+    <section class="card span6">
+      <div class="topline"><div><h2>Patient 2</h2><p>No data source configured</p></div><span class="pill">Not available</span></div>
+      <div class="unavailable"><div class="dash">---</div><strong>NOT AVAILABLE</strong><span class="small">Patient data not collected</span></div>
+    </section>
+    <section class="card span6">
+      <div class="topline"><div><h2>Patient 3</h2><p>No data source configured</p></div><span class="pill">Not available</span></div>
+      <div class="unavailable"><div class="dash">---</div><strong>NOT AVAILABLE</strong><span class="small">Patient data not collected</span></div>
+    </section>
+    <section class="card span12">
+      <div class="topline"><div><h2>Receiver serial log</h2><p>Recent receiver output helps diagnose connectivity.</p></div><span class="pill" id="portLabel">COM10</span></div>
+      <pre id="logs">Waiting for receiver serial output…</pre><p class="small" id="serialError" style="margin-top:12px"></p>
+    </section>
+  </div>
+</main>
+<footer>Prototype monitoring interface · Not a diagnostic or treatment system</footer>
+<script>
+const fields=[
+ ["temperature_c","Temperature","°C"],["humidity_percent","Humidity","%"],["vibration","Vibration",""],
+ ["pressure_hpa","Pressure","hPa"],["bmp_temperature_c","BMP temperature","°C"],
+ ["accel_x_g","Accel X","g"],["accel_y_g","Accel Y","g"],["accel_z_g","Accel Z","g"],
+ ["gyro_x_dps","Gyro X","°/s"],["gyro_y_dps","Gyro Y","°/s"],["gyro_z_dps","Gyro Z","°/s"],
+ ["ecg_raw","ECG raw value",""],["ecg_signal","ECG signal",""],["load_cell_g","Load cell","g"],
+ ["water_level","Water level",""],["ds18b20_temperature_c","DS18B20 temperature","°C"]
+];
+function fmt(v){return typeof v==="number"?v.toFixed(2):(v??"—")}
+function metric(label,value,unit){return `<div class="metric"><div class="label">${label}</div><div class="value">${fmt(value)} <span class="unit">${unit||""}</span></div></div>`}
+async function refresh(){
+ try{
+  const response=await fetch("/api/data",{cache:"no-store"});const d=await response.json();
+  document.getElementById("serialBadge").textContent=d.connected?`Receiver connected · ${d.port}`:`Receiver disconnected · ${d.port}`;
+  document.getElementById("serialBadge").className=d.connected?"pill good":"pill bad";
+  document.getElementById("rxState").textContent=d.connected?"Connected":"Disconnected";
+  document.getElementById("portLabel").textContent=`${d.port} · ${d.baud_rate} baud`;
+  const all={...d.tx1,...d.tx2};
+  document.getElementById("metrics").innerHTML=fields.map(([k,l,u])=>metric(l,all[k],u)).join("");
+  document.getElementById("patientStatus").textContent=d.patient1_status;
+  document.getElementById("patientDetail").textContent =
+  "ECG signal and temperature readings are being received.";
+  const has=d.ecg_present;
+  document.getElementById("patientBadge").textContent=has?"Data received":"Not collected";
+  document.getElementById("patientBadge").className=has?"pill good":"pill warn";
+  document.getElementById("lastUpdate").textContent=d.last_update||"—";
+  document.getElementById("cloudBadge").textContent=d.firebase.status;
+  document.getElementById("cloudBadge").className=d.firebase.configured?"pill warn":"pill warn";
+  document.getElementById("cloudStatus").textContent=d.firebase.status;
+  document.getElementById("cloudNote").textContent=d.firebase.note;
+  document.getElementById("logs").textContent=(d.messages||[]).join("\n")||"Waiting for receiver serial output…";
+  document.getElementById("serialError").textContent=d.serial_error?`Serial status: ${d.serial_error}`:"";
+ }catch(e){document.getElementById("serialBadge").textContent="Flask API unavailable";document.getElementById("serialError").textContent=String(e)}
+}
+refresh();setInterval(refresh,1500);
+</script>
+</body>
+</html>
